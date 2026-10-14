@@ -24,12 +24,28 @@ const DIFICULDADES = {
   extremo: { nome: "Extremo", celulas: 30, velocidadeMs: 60 },
 };
 
+const CIMA = { x: 0, y: -1 };
+const BAIXO = { x: 0, y: 1 };
+const ESQUERDA = { x: -1, y: 0 };
+const DIREITA = { x: 1, y: 0 };
+
+// Setas ou WASD. Usa evento.code, que identifica a tecla física,
+// então funciona com Caps Lock ligado e em qualquer layout de teclado.
 const DIRECOES = {
-  ArrowUp: { x: 0, y: -1 },
-  ArrowDown: { x: 0, y: 1 },
-  ArrowLeft: { x: -1, y: 0 },
-  ArrowRight: { x: 1, y: 0 },
+  ArrowUp: CIMA,
+  ArrowDown: BAIXO,
+  ArrowLeft: ESQUERDA,
+  ArrowRight: DIREITA,
+  KeyW: CIMA,
+  KeyS: BAIXO,
+  KeyA: ESQUERDA,
+  KeyD: DIREITA,
 };
+
+// Uma comida nova aparece a cada 8 s ou sempre que uma comida é pega,
+// e precisa ficar a pelo menos 7 casas de todas as outras.
+const INTERVALO_COMIDA_MS = 8000;
+const DISTANCIA_MINIMA_COMIDAS = 7;
 
 const CORES = {
   tela: "#0b0f0c",
@@ -46,7 +62,8 @@ let tamanhoCelula;
 let cobra;
 let direcao;
 let filaDirecoes; // guarda as teclas apertadas entre um passo e outro
-let comida;
+let comidas = [];
+let tempoDesdeUltimaComida = 0;
 let pontuacao = 0;
 let recordes = carregarRecordes();
 let intervalo = null;
@@ -97,7 +114,7 @@ function abrirMenu() {
   elRecorde.textContent = "-";
   configurarTabuleiro(DIFICULDADES.medio.celulas);
   cobra = [];
-  comida = null;
+  comidas = [];
   desenhar();
   mostrarTela(telaMenu);
 }
@@ -162,17 +179,19 @@ function iniciar() {
     { x: meio - 1, y: meio },
     { x: meio - 2, y: meio },
   ];
-  direcao = DIRECOES.ArrowRight;
+  direcao = DIREITA;
   filaDirecoes = [];
   pontuacao = 0;
-  comida = novaComida();
+  comidas = [];
+  adicionarComida();
+  tempoDesdeUltimaComida = 0;
   estado = "esperando";
 
   elNivel.textContent = dificuldade.nome;
   atualizarPlacar();
   elTituloMensagem.textContent = dificuldade.nome;
   elTituloMensagem.className = "titulo-mensagem nivel";
-  elTextoMensagem.textContent = "Pressione uma seta para comecar";
+  elTextoMensagem.textContent = "Pressione uma seta ou WASD para comecar";
   elTextoMensagem.classList.add("piscando");
   botoesFimDeJogo.classList.add("oculto");
   mostrarTela(elMensagem);
@@ -190,21 +209,35 @@ function pararLoop() {
   intervalo = null;
 }
 
-function novaComida() {
-  const livres = [];
+// Distância em casas andando só na horizontal e na vertical, como a cobra anda.
+function distancia(a, b) {
+  return Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+}
+
+// Coloca uma comida numa casa livre que esteja longe o bastante das outras.
+// Se não houver casa possível (tabuleiro pequeno ou cheio), não coloca nada.
+function adicionarComida() {
+  const possiveis = [];
   for (let x = 0; x < celulas; x++) {
     for (let y = 0; y < celulas; y++) {
-      if (!cobra.some((p) => p.x === x && p.y === y)) livres.push({ x, y });
+      const casa = { x, y };
+      const ocupada = cobra.some((p) => p.x === x && p.y === y);
+      const pertoDeOutra = comidas.some(
+        (c) => distancia(c, casa) < DISTANCIA_MINIMA_COMIDAS
+      );
+      if (!ocupada && !pertoDeOutra) possiveis.push(casa);
     }
   }
-  return livres[Math.floor(Math.random() * livres.length)];
+  if (possiveis.length === 0) return;
+  comidas.push(possiveis[Math.floor(Math.random() * possiveis.length)]);
 }
 
 function passo() {
   if (filaDirecoes.length > 0) direcao = filaDirecoes.shift();
 
   const cabeca = { x: cobra[0].x + direcao.x, y: cobra[0].y + direcao.y };
-  const comeu = cabeca.x === comida.x && cabeca.y === comida.y;
+  const indiceComida = comidas.findIndex((c) => c.x === cabeca.x && c.y === cabeca.y);
+  const comeu = indiceComida !== -1;
 
   // Se não comeu, a cauda sai do lugar neste passo, então pode ser ocupada.
   const corpo = comeu ? cobra : cobra.slice(0, -1);
@@ -225,9 +258,18 @@ function passo() {
       fimDeJogo(true);
       return;
     }
-    comida = novaComida();
+    comidas.splice(indiceComida, 1);
+    adicionarComida();
+    tempoDesdeUltimaComida = 0;
   } else {
     cobra.pop();
+  }
+
+  // O relógio da comida conta só enquanto o jogo está rodando.
+  tempoDesdeUltimaComida += dificuldade.velocidadeMs;
+  if (tempoDesdeUltimaComida >= INTERVALO_COMIDA_MS) {
+    adicionarComida();
+    tempoDesdeUltimaComida = 0;
   }
 
   desenhar();
@@ -273,7 +315,7 @@ function desenharGrade() {
   ctx.stroke();
 }
 
-function desenharComida() {
+function desenharComida(comida) {
   const cx = comida.x * tamanhoCelula + tamanhoCelula / 2;
   const cy = comida.y * tamanhoCelula + tamanhoCelula / 2;
   const escala = tamanhoCelula / 20;
@@ -346,23 +388,24 @@ function desenhar() {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   desenharGrade();
-  if (comida) desenharComida();
+  comidas.forEach(desenharComida);
   if (cobra.length) desenharCobra();
 }
 
 /* ---------- Controles ---------- */
 
-// Nos menus, as setas ↑ ↓ movem o foco entre os botões.
+// Nos menus, as setas ↑ ↓ (ou W e S) movem o foco entre os botões.
 function navegarMenu(evento) {
   const tela = TELAS.find(
     (t) => !t.classList.contains("oculto")
   );
-  if (!tela || (evento.key !== "ArrowUp" && evento.key !== "ArrowDown")) return false;
+  const sentido = DIRECOES[evento.code];
+  if (!tela || !sentido || sentido.y === 0) return false;
 
   const botoes = [...tela.querySelectorAll("button")].filter((b) => b.offsetParent);
   if (!botoes.length) return false;
   const atual = botoes.indexOf(document.activeElement);
-  const passoFoco = evento.key === "ArrowDown" ? 1 : -1;
+  const passoFoco = sentido.y;
   const proximo = (atual + passoFoco + botoes.length) % botoes.length;
   botoes[proximo].focus();
   evento.preventDefault();
@@ -377,7 +420,8 @@ document.addEventListener("keydown", (evento) => {
     return;
   }
 
-  const nova = DIRECOES[evento.key];
+  if (evento.ctrlKey || evento.metaKey || evento.altKey) return;
+  const nova = DIRECOES[evento.code];
   if (!nova) return;
   evento.preventDefault(); // evita rolar a página com as setas
 
