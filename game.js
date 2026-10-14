@@ -3,6 +3,7 @@ const ctx = canvas.getContext("2d");
 const elPontuacao = document.getElementById("pontuacao");
 const elRecorde = document.getElementById("recorde");
 const elMensagem = document.getElementById("mensagem");
+const elTituloMensagem = document.getElementById("titulo-mensagem");
 const elTextoMensagem = document.getElementById("texto-mensagem");
 const botaoJogar = document.getElementById("botao-jogar");
 
@@ -59,6 +60,7 @@ function iniciar() {
   intervalo = null;
 
   atualizarPlacar();
+  elTituloMensagem.classList.add("oculto");
   elTextoMensagem.textContent = "Pressione uma seta para começar";
   botaoJogar.classList.add("oculto");
   elMensagem.classList.remove("oculto");
@@ -126,9 +128,10 @@ function fimDeJogo(venceu = false) {
   }
 
   desenhar();
-  elTextoMensagem.textContent = venceu
-    ? `Você venceu! Pontuação: ${pontuacao}`
-    : `Fim de jogo! Pontuação: ${pontuacao}`;
+  elTituloMensagem.textContent = venceu ? "Você venceu!" : "Fim de jogo";
+  elTituloMensagem.classList.toggle("vitoria", venceu);
+  elTituloMensagem.classList.remove("oculto");
+  elTextoMensagem.textContent = `Pontuação: ${pontuacao}`;
   botaoJogar.classList.remove("oculto");
   elMensagem.classList.remove("oculto");
   botaoJogar.focus();
@@ -139,36 +142,101 @@ function atualizarPlacar() {
   elRecorde.textContent = recorde;
 }
 
-function desenharCelula(x, y, cor, margem = 1) {
-  ctx.fillStyle = cor;
-  ctx.fillRect(
-    x * TAMANHO_CELULA + margem,
-    y * TAMANHO_CELULA + margem,
-    TAMANHO_CELULA - margem * 2,
-    TAMANHO_CELULA - margem * 2
-  );
+const CORES = {
+  tela: "#0b0f0c",
+  grade: "rgba(57, 255, 20, 0.05)",
+  neon: "#39ff14",
+  cabeca: "#b6ff9e",
+  comida: "#ff2a3d",
+  brilhoComida: "#ff4d5e",
+};
+
+function desenharGrade() {
+  ctx.strokeStyle = CORES.grade;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let i = 1; i < CELULAS; i++) {
+    const p = i * TAMANHO_CELULA + 0.5;
+    ctx.moveTo(p, 0);
+    ctx.lineTo(p, canvas.height);
+    ctx.moveTo(0, p);
+    ctx.lineTo(canvas.width, p);
+  }
+  ctx.stroke();
+}
+
+function desenharComida() {
+  const cx = comida.x * TAMANHO_CELULA + TAMANHO_CELULA / 2;
+  const cy = comida.y * TAMANHO_CELULA + TAMANHO_CELULA / 2;
+
+  ctx.save();
+  ctx.shadowColor = CORES.brilhoComida;
+  ctx.shadowBlur = 14;
+  ctx.fillStyle = CORES.comida;
+  ctx.beginPath();
+  ctx.arc(cx, cy, TAMANHO_CELULA / 2 - 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // pequeno reflexo para dar volume
+  ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
+  ctx.beginPath();
+  ctx.arc(cx - 3, cy - 3, 2, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function desenharCobra() {
+  const margem = 2;
+  const lado = TAMANHO_CELULA - margem * 2;
+
+  ctx.save();
+  ctx.shadowColor = CORES.neon;
+  ctx.shadowBlur = 10;
+  // desenha da cauda para a cabeça, assim a cabeça fica por cima
+  for (let i = cobra.length - 1; i >= 0; i--) {
+    const parte = cobra[i];
+    ctx.fillStyle = i === 0 ? CORES.cabeca : CORES.neon;
+    ctx.globalAlpha = i === 0 ? 1 : Math.max(0.55, 1 - i * 0.02);
+    ctx.fillRect(
+      parte.x * TAMANHO_CELULA + margem,
+      parte.y * TAMANHO_CELULA + margem,
+      lado,
+      lado
+    );
+  }
+  ctx.restore();
+
+  desenharOlhos();
+}
+
+function desenharOlhos() {
+  const cabeca = cobra[0];
+  const cx = cabeca.x * TAMANHO_CELULA + TAMANHO_CELULA / 2;
+  const cy = cabeca.y * TAMANHO_CELULA + TAMANHO_CELULA / 2;
+  // olhos ficam do lado para onde a cobra está indo
+  const frente = 4;
+  const lado = 4;
+  const px = -direcao.y; // vetor perpendicular à direção
+  const py = direcao.x;
+
+  ctx.fillStyle = CORES.tela;
+  for (const s of [-1, 1]) {
+    ctx.fillRect(
+      Math.round(cx + direcao.x * frente + px * lado * s) - 1.5,
+      Math.round(cy + direcao.y * frente + py * lado * s) - 1.5,
+      3,
+      3
+    );
+  }
 }
 
 function desenhar() {
-  ctx.fillStyle = "#22272e";
+  ctx.fillStyle = CORES.tela;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // comida
-  ctx.fillStyle = "#ff6b6b";
-  ctx.beginPath();
-  ctx.arc(
-    comida.x * TAMANHO_CELULA + TAMANHO_CELULA / 2,
-    comida.y * TAMANHO_CELULA + TAMANHO_CELULA / 2,
-    TAMANHO_CELULA / 2 - 2,
-    0,
-    Math.PI * 2
-  );
-  ctx.fill();
-
-  // cobra (cabeça mais clara)
-  cobra.forEach((parte, i) => {
-    desenharCelula(parte.x, parte.y, i === 0 ? "#b5f5c1" : "#7bd88f");
-  });
+  desenharGrade();
+  desenharComida();
+  desenharCobra();
 }
 
 document.addEventListener("keydown", (evento) => {
