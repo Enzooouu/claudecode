@@ -3,26 +3,26 @@ const ctx = canvas.getContext("2d");
 const elPontuacao = document.getElementById("pontuacao");
 const elRecorde = document.getElementById("recorde");
 const elNivel = document.getElementById("nivel");
+const tabuleiro = document.getElementById("tabuleiro");
 const telaMenu = document.getElementById("tela-menu");
 const telaDificuldade = document.getElementById("tela-dificuldade");
+const telaRecordes = document.getElementById("tela-recordes");
+const telaSair = document.getElementById("tela-sair");
+const listaRecordes = document.getElementById("lista-recordes");
 const elMensagem = document.getElementById("mensagem");
+const TELAS = [telaMenu, telaDificuldade, telaRecordes, telaSair, elMensagem];
 const elTituloMensagem = document.getElementById("titulo-mensagem");
 const elTextoMensagem = document.getElementById("texto-mensagem");
 const botoesFimDeJogo = document.getElementById("botoes-fim");
 const botaoJogar = document.getElementById("botao-jogar");
-const botaoMenu = document.getElementById("botao-menu");
-const botaoVoltar = document.getElementById("botao-voltar");
 
 // Quanto maior o tabuleiro, mais rápida a cobrinha (menos ms por passo).
 const DIFICULDADES = {
-  facil: { nome: "Fácil", celulas: 7, velocidadeMs: 200 },
-  medio: { nome: "Médio", celulas: 15, velocidadeMs: 140 },
-  dificil: { nome: "Difícil", celulas: 23, velocidadeMs: 95 },
+  facil: { nome: "Facil", celulas: 7, velocidadeMs: 200 },
+  medio: { nome: "Medio", celulas: 15, velocidadeMs: 140 },
+  dificil: { nome: "Dificil", celulas: 23, velocidadeMs: 95 },
   extremo: { nome: "Extremo", celulas: 30, velocidadeMs: 60 },
 };
-
-// O canvas tem ~420px de lado; cada célula ocupa um número inteiro de pixels.
-const LADO_CANVAS = 420;
 
 const DIRECOES = {
   ArrowUp: { x: 0, y: -1 },
@@ -81,7 +81,7 @@ function recordeAtual() {
 /* ---------- Telas ---------- */
 
 function mostrarTela(tela) {
-  for (const t of [telaMenu, telaDificuldade, elMensagem]) {
+  for (const t of TELAS) {
     t.classList.toggle("oculto", t !== tela);
   }
   const primeiroBotao = tela && tela.querySelector("button:not(.oculto)");
@@ -106,11 +106,44 @@ function abrirDificuldades() {
   mostrarTela(telaDificuldade);
 }
 
+function abrirRecordes() {
+  listaRecordes.innerHTML = "";
+  for (const [chave, d] of Object.entries(DIFICULDADES)) {
+    const item = document.createElement("li");
+    const nome = document.createElement("span");
+    nome.className = "nome";
+    nome.textContent = d.nome;
+    const valor = document.createElement("span");
+    const pontos = recordes[chave];
+    valor.className = pontos ? "valor" : "valor vazio";
+    valor.textContent = pontos ? pontos : "---";
+    item.append(nome, valor);
+    listaRecordes.append(item);
+  }
+  mostrarTela(telaRecordes);
+}
+
+function abrirConfirmacaoSair() {
+  mostrarTela(telaSair);
+  // foca o "Nao" para que um Enter sem querer não feche o site
+  telaSair.querySelector("[data-acao=voltar]").focus();
+}
+
+function sairDoSite() {
+  // Só funciona se a aba foi aberta por um script; senão, o navegador ignora.
+  window.close();
+  // Se a aba continuar aberta, sai do site indo para uma página em branco.
+  setTimeout(() => location.replace("about:blank"), 100);
+}
+
 /* ---------- Jogo ---------- */
 
+// O canvas acompanha o tamanho real do tabuleiro na tela (em pixels do
+// dispositivo, para ficar nítido); cada célula ocupa um número inteiro de pixels.
 function configurarTabuleiro(n) {
   celulas = n;
-  tamanhoCelula = Math.floor(LADO_CANVAS / n);
+  const lado = Math.round(canvas.clientWidth * (window.devicePixelRatio || 1)) || 420;
+  tamanhoCelula = Math.max(1, Math.floor(lado / n));
   canvas.width = canvas.height = tamanhoCelula * n;
 }
 
@@ -139,7 +172,7 @@ function iniciar() {
   atualizarPlacar();
   elTituloMensagem.textContent = dificuldade.nome;
   elTituloMensagem.className = "titulo-mensagem nivel";
-  elTextoMensagem.textContent = "Pressione uma seta para começar";
+  elTextoMensagem.textContent = "Pressione uma seta para comecar";
   elTextoMensagem.classList.add("piscando");
   botoesFimDeJogo.classList.add("oculto");
   mostrarTela(elMensagem);
@@ -211,9 +244,9 @@ function fimDeJogo(venceu = false) {
   }
 
   desenhar();
-  elTituloMensagem.textContent = venceu ? "Você venceu!" : "Fim de jogo";
+  elTituloMensagem.textContent = venceu ? "Voce venceu!" : "Fim de jogo";
   elTituloMensagem.className = venceu ? "titulo-mensagem vitoria" : "titulo-mensagem";
-  elTextoMensagem.textContent = `Pontuação: ${pontuacao}`;
+  elTextoMensagem.textContent = `Pontuacao: ${pontuacao}`;
   elTextoMensagem.classList.remove("piscando");
   botoesFimDeJogo.classList.remove("oculto");
   mostrarTela(elMensagem);
@@ -321,7 +354,7 @@ function desenhar() {
 
 // Nos menus, as setas ↑ ↓ movem o foco entre os botões.
 function navegarMenu(evento) {
-  const tela = [telaMenu, telaDificuldade, elMensagem].find(
+  const tela = TELAS.find(
     (t) => !t.classList.contains("oculto")
   );
   if (!tela || (evento.key !== "ArrowUp" && evento.key !== "ArrowDown")) return false;
@@ -338,6 +371,8 @@ function navegarMenu(evento) {
 
 document.addEventListener("keydown", (evento) => {
   if (estado === "menu" || estado === "fim") {
+    // Esc volta ao menu a partir das telas de dificuldade, recordes e sair
+    if (evento.key === "Escape" && estado === "menu") mostrarTela(telaMenu);
     navegarMenu(evento);
     return;
   }
@@ -364,20 +399,44 @@ document.addEventListener("keydown", (evento) => {
   }
 });
 
-telaMenu.addEventListener("click", (evento) => {
+// Um único ouvinte trata os botões de todas as telas pelo atributo data-*.
+tabuleiro.addEventListener("click", (evento) => {
   const botao = evento.target.closest("button");
   if (!botao) return;
-  if (botao.dataset.acao === "jogar") abrirDificuldades();
-  // "recordes" e "sair" serão implementados em seguida
+
+  if (botao.dataset.dificuldade) {
+    escolherDificuldade(botao.dataset.dificuldade);
+    return;
+  }
+
+  switch (botao.dataset.acao) {
+    case "jogar":
+      abrirDificuldades();
+      break;
+    case "recordes":
+      abrirRecordes();
+      break;
+    case "sair":
+      abrirConfirmacaoSair();
+      break;
+    case "confirmar-saida":
+      sairDoSite();
+      break;
+    case "voltar":
+      mostrarTela(telaMenu);
+      break;
+    case "menu":
+      abrirMenu();
+      break;
+  }
 });
 
-telaDificuldade.addEventListener("click", (evento) => {
-  const botao = evento.target.closest("button[data-dificuldade]");
-  if (botao) escolherDificuldade(botao.dataset.dificuldade);
-});
-
-botaoVoltar.addEventListener("click", abrirMenu);
 botaoJogar.addEventListener("click", iniciar);
-botaoMenu.addEventListener("click", abrirMenu);
+
+// Quando a janela muda de tamanho, o canvas é recalculado e redesenhado.
+new ResizeObserver(() => {
+  configurarTabuleiro(celulas);
+  desenhar();
+}).observe(canvas);
 
 abrirMenu();

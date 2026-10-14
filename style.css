@@ -21,25 +21,26 @@ body {
 
 body {
   margin: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  overflow: hidden;
   background: radial-gradient(circle at center, #12121f 0%, var(--fundo) 70%);
   color: var(--texto);
   font-family: var(--fonte);
 }
 
+/* A página inteira é a tela do jogo: título e placar no topo, tabuleiro no resto */
 .jogo {
+  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 16px;
+  padding: clamp(10px, 2.5vmin, 24px) 16px;
   text-align: center;
 }
 
 h1 {
-  margin: 0 0 20px;
-  font-size: clamp(1.4rem, 6vw, 2.2rem);
+  margin: 0 0 clamp(8px, 2vmin, 18px);
+  font-size: clamp(1.2rem, 5vmin, 2.8rem);
   font-weight: normal;
   letter-spacing: 4px;
   text-transform: uppercase;
@@ -54,12 +55,12 @@ h1 {
 .placar {
   display: flex;
   justify-content: center;
-  gap: clamp(12px, 5vw, 36px);
-  margin-bottom: 16px;
+  gap: clamp(12px, 5vw, 48px);
+  margin-bottom: clamp(8px, 2vmin, 18px);
 }
 
 .placar-item {
-  min-width: 96px;
+  min-width: clamp(80px, 14vmin, 140px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -67,29 +68,42 @@ h1 {
 }
 
 .placar-rotulo {
-  font-size: 0.6rem;
+  font-size: clamp(0.55rem, 1.4vmin, 0.8rem);
   letter-spacing: 2px;
   text-transform: uppercase;
   color: var(--texto-fraco);
 }
 
 .placar strong {
-  font-size: clamp(0.75rem, 3.6vw, 1.1rem);
+  font-size: clamp(0.75rem, 2.6vmin, 1.4rem);
   font-weight: normal;
   text-transform: uppercase;
   color: var(--amarelo);
   text-shadow: 0 0 8px rgba(255, 225, 77, 0.6);
 }
 
+/* Área flexível que sobra entre o placar e a dica */
+.area-tabuleiro {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  container-type: size;
+}
+
+/* Maior quadrado que cabe na área (cqw/cqh = % da largura/altura da área) */
 .tabuleiro {
   position: relative;
-  width: min(420px, calc(100vw - 32px));
+  width: min(100cqw, 100cqh);
   aspect-ratio: 1;
   border: 4px solid var(--neon);
   box-shadow:
     0 0 12px var(--neon-suave),
     0 0 40px rgba(57, 255, 20, 0.15),
     inset 0 0 20px rgba(57, 255, 20, 0.12);
+  container-type: inline-size;
 }
 
 canvas {
@@ -97,7 +111,6 @@ canvas {
   width: 100%;
   height: 100%;
   background: var(--tela);
-  image-rendering: pixelated;
 }
 
 /* Linhas de varredura de monitor CRT */
@@ -115,6 +128,8 @@ canvas {
   );
 }
 
+/* Telas sobrepostas ao tabuleiro (menu, dificuldade, recordes...).
+   Os tamanhos usam cqw para crescer junto com o tabuleiro. */
 .tela {
   position: absolute;
   inset: 0;
@@ -123,45 +138,46 @@ canvas {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 24px;
-  padding: 16px;
+  gap: 5cqw;
+  padding: 4cqw;
   background: rgba(0, 0, 0, 0.55);
 }
 
-.titulo-mensagem {
+.titulo-mensagem,
+.titulo-tela {
   margin: 0;
-  font-size: clamp(1.1rem, 5vw, 1.6rem);
+  font-size: clamp(0.9rem, 5.5cqw, 2.4rem);
   font-weight: normal;
   line-height: 1.4;
   text-transform: uppercase;
+}
+
+.titulo-mensagem {
   color: var(--vermelho);
   text-shadow:
     0 0 8px var(--vermelho),
     3px 3px 0 #5a0010;
 }
 
-.titulo-mensagem.vitoria {
-  color: var(--amarelo);
-  text-shadow:
-    0 0 8px var(--amarelo),
-    3px 3px 0 #5a4a00;
-}
-
 .titulo-mensagem.nivel,
+.titulo-mensagem.vitoria,
 .titulo-tela {
-  margin: 0;
-  font-size: clamp(0.9rem, 4.5vw, 1.2rem);
-  font-weight: normal;
-  text-transform: uppercase;
   color: var(--amarelo);
   text-shadow:
     0 0 8px rgba(255, 225, 77, 0.6),
     3px 3px 0 #5a4a00;
 }
 
+.titulo-tela.perigo {
+  color: var(--vermelho);
+  text-shadow:
+    0 0 8px var(--vermelho),
+    3px 3px 0 #5a0010;
+}
+
 .tela p {
   margin: 0;
-  font-size: 0.75rem;
+  font-size: clamp(0.6rem, 3cqw, 1.2rem);
   line-height: 1.8;
   text-transform: uppercase;
   color: var(--texto);
@@ -177,10 +193,18 @@ canvas {
   }
 }
 
+/* Botões empilhados de cima para baixo, todos com a mesma largura */
+.lista-botoes {
+  display: flex;
+  flex-direction: column;
+  gap: 3.2cqw;
+  width: min(62cqw, 100%);
+}
+
 button {
-  padding: 14px 18px;
+  padding: 3.4cqw 4cqw;
   font-family: var(--fonte);
-  font-size: 0.7rem;
+  font-size: clamp(0.6rem, 3cqw, 1.25rem);
   text-transform: uppercase;
   color: var(--fundo);
   background: var(--neon);
@@ -189,14 +213,6 @@ button {
     4px 4px 0 #0a4d00,
     0 0 16px var(--neon-suave);
   cursor: pointer;
-}
-
-/* Botões empilhados de cima para baixo, todos com a mesma largura */
-.lista-botoes {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  width: min(250px, 80%);
 }
 
 /* O botão selecionado (mouse ou setas) fica amarelo, como num fliperama */
@@ -209,6 +225,11 @@ button:focus {
   outline: none;
 }
 
+button:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 16px var(--neon-suave);
+}
+
 .botao-nivel {
   display: flex;
   justify-content: space-between;
@@ -217,11 +238,12 @@ button:focus {
 }
 
 .botao-nivel small {
-  font-size: 0.55rem;
+  font-size: 0.75em;
   opacity: 0.7;
 }
 
-.botao-nivel.extremo {
+.botao-nivel.extremo,
+.botao-perigo {
   background: var(--vermelho);
   box-shadow:
     4px 4px 0 #5a0010,
@@ -229,12 +251,13 @@ button:focus {
 }
 
 .botao-nivel.extremo:hover,
-.botao-nivel.extremo:focus {
+.botao-nivel.extremo:focus,
+.botao-perigo:hover,
+.botao-perigo:focus {
   background: #ff6b78;
 }
 
 button.secundario {
-  margin-top: 6px;
   color: var(--neon);
   background: transparent;
   border: 2px solid var(--neon);
@@ -247,9 +270,40 @@ button.secundario:focus {
   background: var(--neon);
 }
 
-button:active {
-  transform: translate(4px, 4px);
-  box-shadow: 0 0 16px var(--neon-suave);
+/* Tabela de recordes: nome da dificuldade à esquerda, pontos à direita */
+.lista-recordes {
+  width: min(62cqw, 100%);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2.4cqw;
+  font-size: clamp(0.6rem, 3cqw, 1.25rem);
+  text-transform: uppercase;
+}
+
+.lista-recordes li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding-bottom: 2.4cqw;
+  border-bottom: 2px dashed rgba(57, 255, 20, 0.25);
+}
+
+.lista-recordes .nome {
+  color: var(--texto);
+}
+
+.lista-recordes .valor {
+  color: var(--amarelo);
+  text-shadow: 0 0 8px rgba(255, 225, 77, 0.6);
+}
+
+.lista-recordes .vazio {
+  color: var(--texto-fraco);
+  text-shadow: none;
 }
 
 .oculto {
@@ -257,8 +311,8 @@ button:active {
 }
 
 .dica {
-  margin: 20px 0 0;
-  font-size: 0.55rem;
+  margin: clamp(8px, 2vmin, 18px) 0 0;
+  font-size: clamp(0.5rem, 1.3vmin, 0.75rem);
   letter-spacing: 1px;
   color: var(--texto-fraco);
 }

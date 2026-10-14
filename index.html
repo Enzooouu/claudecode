@@ -15,7 +15,7 @@
 
     <div class="placar">
       <div class="placar-item">
-        <span class="placar-rotulo">Nível</span>
+        <span class="placar-rotulo">Nivel</span>
         <strong id="nivel">-</strong>
       </div>
       <div class="placar-item">
@@ -28,45 +28,66 @@
       </div>
     </div>
 
-    <div class="tabuleiro">
-      <canvas id="canvas" width="420" height="420"></canvas>
+    <!-- Ocupa todo o espaço que sobra; o tabuleiro é o maior quadrado que cabe nele -->
+    <div class="area-tabuleiro">
+      <div id="tabuleiro" class="tabuleiro">
+        <canvas id="canvas"></canvas>
 
-      <!-- Menu inicial -->
-      <div id="tela-menu" class="tela">
-        <div class="lista-botoes">
-          <button type="button" data-acao="jogar">Jogar</button>
-          <button type="button" data-acao="recordes">Meus recordes</button>
-          <button type="button" data-acao="sair">Sair</button>
+        <!-- Menu inicial -->
+        <div id="tela-menu" class="tela">
+          <div class="lista-botoes">
+            <button type="button" data-acao="jogar">Jogar</button>
+            <button type="button" data-acao="recordes">Meus recordes</button>
+            <button type="button" data-acao="sair">Sair</button>
+          </div>
         </div>
-      </div>
 
-      <!-- Escolha de dificuldade -->
-      <div id="tela-dificuldade" class="tela oculto">
-        <h2 class="titulo-tela">Dificuldade</h2>
-        <div class="lista-botoes">
-          <button type="button" class="botao-nivel" data-dificuldade="facil">
-            <span>Fácil</span><small>7x7</small>
-          </button>
-          <button type="button" class="botao-nivel" data-dificuldade="medio">
-            <span>Médio</span><small>15x15</small>
-          </button>
-          <button type="button" class="botao-nivel" data-dificuldade="dificil">
-            <span>Difícil</span><small>23x23</small>
-          </button>
-          <button type="button" class="botao-nivel extremo" data-dificuldade="extremo">
-            <span>Extremo</span><small>30x30</small>
-          </button>
-          <button type="button" id="botao-voltar" class="secundario">Voltar</button>
+        <!-- Escolha de dificuldade -->
+        <div id="tela-dificuldade" class="tela oculto">
+          <h2 class="titulo-tela">Dificuldade</h2>
+          <div class="lista-botoes">
+            <button type="button" class="botao-nivel" data-dificuldade="facil">
+              <span>Facil</span><small>7x7</small>
+            </button>
+            <button type="button" class="botao-nivel" data-dificuldade="medio">
+              <span>Medio</span><small>15x15</small>
+            </button>
+            <button type="button" class="botao-nivel" data-dificuldade="dificil">
+              <span>Dificil</span><small>23x23</small>
+            </button>
+            <button type="button" class="botao-nivel extremo" data-dificuldade="extremo">
+              <span>Extremo</span><small>30x30</small>
+            </button>
+            <button type="button" class="secundario" data-acao="voltar">Voltar</button>
+          </div>
         </div>
-      </div>
 
-      <!-- Antes de começar e fim de jogo -->
-      <div id="mensagem" class="tela oculto">
-        <h2 id="titulo-mensagem" class="titulo-mensagem"></h2>
-        <p id="texto-mensagem"></p>
-        <div id="botoes-fim" class="lista-botoes oculto">
-          <button id="botao-jogar" type="button">Jogar de novo</button>
-          <button id="botao-menu" type="button" class="secundario">Menu</button>
+        <!-- Meus recordes -->
+        <div id="tela-recordes" class="tela oculto">
+          <h2 class="titulo-tela">Meus recordes</h2>
+          <ul id="lista-recordes" class="lista-recordes"></ul>
+          <div class="lista-botoes">
+            <button type="button" class="secundario" data-acao="voltar">Voltar</button>
+          </div>
+        </div>
+
+        <!-- Confirmação de saída -->
+        <div id="tela-sair" class="tela oculto">
+          <h2 class="titulo-tela perigo">Deseja sair?</h2>
+          <div class="lista-botoes">
+            <button type="button" class="botao-perigo" data-acao="confirmar-saida">Sim, sair</button>
+            <button type="button" class="secundario" data-acao="voltar">Nao, voltar</button>
+          </div>
+        </div>
+
+        <!-- Antes de começar e fim de jogo -->
+        <div id="mensagem" class="tela oculto">
+          <h2 id="titulo-mensagem" class="titulo-mensagem"></h2>
+          <p id="texto-mensagem"></p>
+          <div id="botoes-fim" class="lista-botoes oculto">
+            <button id="botao-jogar" type="button">Jogar de novo</button>
+            <button type="button" class="secundario" data-acao="menu">Menu</button>
+          </div>
         </div>
       </div>
     </div>
