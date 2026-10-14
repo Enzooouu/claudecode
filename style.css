@@ -54,11 +54,12 @@ h1 {
 .placar {
   display: flex;
   justify-content: center;
-  gap: 48px;
+  gap: clamp(12px, 5vw, 36px);
   margin-bottom: 16px;
 }
 
 .placar-item {
+  min-width: 96px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -73,15 +74,16 @@ h1 {
 }
 
 .placar strong {
-  font-size: 1.2rem;
+  font-size: clamp(0.75rem, 3.6vw, 1.1rem);
   font-weight: normal;
+  text-transform: uppercase;
   color: var(--amarelo);
   text-shadow: 0 0 8px rgba(255, 225, 77, 0.6);
 }
 
 .tabuleiro {
   position: relative;
-  width: min(400px, calc(100vw - 32px));
+  width: min(420px, calc(100vw - 32px));
   aspect-ratio: 1;
   border: 4px solid var(--neon);
   box-shadow:
@@ -113,7 +115,7 @@ canvas {
   );
 }
 
-.mensagem {
+.tela {
   position: absolute;
   inset: 0;
   z-index: 1;
@@ -145,12 +147,27 @@ canvas {
     3px 3px 0 #5a4a00;
 }
 
-.mensagem p {
+.titulo-mensagem.nivel,
+.titulo-tela {
+  margin: 0;
+  font-size: clamp(0.9rem, 4.5vw, 1.2rem);
+  font-weight: normal;
+  text-transform: uppercase;
+  color: var(--amarelo);
+  text-shadow:
+    0 0 8px rgba(255, 225, 77, 0.6),
+    3px 3px 0 #5a4a00;
+}
+
+.tela p {
   margin: 0;
   font-size: 0.75rem;
   line-height: 1.8;
   text-transform: uppercase;
   color: var(--texto);
+}
+
+.piscando {
   animation: piscar 1.2s steps(1) infinite;
 }
 
@@ -174,10 +191,60 @@ button {
   cursor: pointer;
 }
 
+/* Botões empilhados de cima para baixo, todos com a mesma largura */
+.lista-botoes {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(250px, 80%);
+}
+
+/* O botão selecionado (mouse ou setas) fica amarelo, como num fliperama */
 button:hover,
-button:focus-visible {
-  background: #7dff5e;
+button:focus {
+  background: var(--amarelo);
+  box-shadow:
+    4px 4px 0 #5a4a00,
+    0 0 18px rgba(255, 225, 77, 0.6);
   outline: none;
+}
+
+.botao-nivel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.botao-nivel small {
+  font-size: 0.55rem;
+  opacity: 0.7;
+}
+
+.botao-nivel.extremo {
+  background: var(--vermelho);
+  box-shadow:
+    4px 4px 0 #5a0010,
+    0 0 16px rgba(255, 42, 61, 0.45);
+}
+
+.botao-nivel.extremo:hover,
+.botao-nivel.extremo:focus {
+  background: #ff6b78;
+}
+
+button.secundario {
+  margin-top: 6px;
+  color: var(--neon);
+  background: transparent;
+  border: 2px solid var(--neon);
+  box-shadow: 0 0 10px var(--neon-suave);
+}
+
+button.secundario:hover,
+button.secundario:focus {
+  color: var(--fundo);
+  background: var(--neon);
 }
 
 button:active {

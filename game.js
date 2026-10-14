@@ -2,14 +2,27 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const elPontuacao = document.getElementById("pontuacao");
 const elRecorde = document.getElementById("recorde");
+const elNivel = document.getElementById("nivel");
+const telaMenu = document.getElementById("tela-menu");
+const telaDificuldade = document.getElementById("tela-dificuldade");
 const elMensagem = document.getElementById("mensagem");
 const elTituloMensagem = document.getElementById("titulo-mensagem");
 const elTextoMensagem = document.getElementById("texto-mensagem");
+const botoesFimDeJogo = document.getElementById("botoes-fim");
 const botaoJogar = document.getElementById("botao-jogar");
+const botaoMenu = document.getElementById("botao-menu");
+const botaoVoltar = document.getElementById("botao-voltar");
 
-const TAMANHO_CELULA = 20;
-const CELULAS = canvas.width / TAMANHO_CELULA; // 20 x 20
-const VELOCIDADE_MS = 110;
+// Quanto maior o tabuleiro, mais rápida a cobrinha (menos ms por passo).
+const DIFICULDADES = {
+  facil: { nome: "Fácil", celulas: 7, velocidadeMs: 200 },
+  medio: { nome: "Médio", celulas: 15, velocidadeMs: 140 },
+  dificil: { nome: "Difícil", celulas: 23, velocidadeMs: 95 },
+  extremo: { nome: "Extremo", celulas: 30, velocidadeMs: 60 },
+};
+
+// O canvas tem ~420px de lado; cada célula ocupa um número inteiro de pixels.
+const LADO_CANVAS = 420;
 
 const DIRECOES = {
   ArrowUp: { x: 0, y: -1 },
@@ -18,33 +31,99 @@ const DIRECOES = {
   ArrowRight: { x: 1, y: 0 },
 };
 
+const CORES = {
+  tela: "#0b0f0c",
+  grade: "rgba(57, 255, 20, 0.05)",
+  neon: "#39ff14",
+  cabeca: "#b6ff9e",
+  comida: "#ff2a3d",
+  brilhoComida: "#ff4d5e",
+};
+
+let dificuldade = DIFICULDADES.medio;
+let celulas = dificuldade.celulas;
+let tamanhoCelula;
 let cobra;
 let direcao;
 let filaDirecoes; // guarda as teclas apertadas entre um passo e outro
 let comida;
-let pontuacao;
-let recorde = carregarRecorde();
+let pontuacao = 0;
+let recordes = carregarRecordes();
 let intervalo = null;
-let estado; // "esperando" | "jogando" | "fim"
+let estado; // "menu" | "esperando" | "jogando" | "fim"
 
-function carregarRecorde() {
+/* ---------- Recordes (um por dificuldade) ---------- */
+
+function carregarRecordes() {
   try {
-    return Number(localStorage.getItem("recorde-cobrinha")) || 0;
+    return JSON.parse(localStorage.getItem("recordes-cobrinha")) || {};
   } catch {
-    return 0;
+    return {};
   }
 }
 
-function salvarRecorde() {
+function salvarRecordes() {
   try {
-    localStorage.setItem("recorde-cobrinha", String(recorde));
+    localStorage.setItem("recordes-cobrinha", JSON.stringify(recordes));
   } catch {
-    // sem armazenamento disponível: o recorde vale só nesta sessão
+    // sem armazenamento disponível: os recordes valem só nesta sessão
   }
+}
+
+function chaveDificuldade() {
+  return Object.keys(DIFICULDADES).find((k) => DIFICULDADES[k] === dificuldade);
+}
+
+function recordeAtual() {
+  return recordes[chaveDificuldade()] || 0;
+}
+
+/* ---------- Telas ---------- */
+
+function mostrarTela(tela) {
+  for (const t of [telaMenu, telaDificuldade, elMensagem]) {
+    t.classList.toggle("oculto", t !== tela);
+  }
+  const primeiroBotao = tela && tela.querySelector("button:not(.oculto)");
+  if (primeiroBotao) primeiroBotao.focus();
+}
+
+function abrirMenu() {
+  pararLoop();
+  estado = "menu";
+  pontuacao = 0;
+  elNivel.textContent = "-";
+  elPontuacao.textContent = "0";
+  elRecorde.textContent = "-";
+  configurarTabuleiro(DIFICULDADES.medio.celulas);
+  cobra = [];
+  comida = null;
+  desenhar();
+  mostrarTela(telaMenu);
+}
+
+function abrirDificuldades() {
+  mostrarTela(telaDificuldade);
+}
+
+/* ---------- Jogo ---------- */
+
+function configurarTabuleiro(n) {
+  celulas = n;
+  tamanhoCelula = Math.floor(LADO_CANVAS / n);
+  canvas.width = canvas.height = tamanhoCelula * n;
+}
+
+function escolherDificuldade(chave) {
+  dificuldade = DIFICULDADES[chave];
+  iniciar();
 }
 
 function iniciar() {
-  const meio = Math.floor(CELULAS / 2);
+  pararLoop();
+  configurarTabuleiro(dificuldade.celulas);
+
+  const meio = Math.floor(celulas / 2);
   cobra = [
     { x: meio, y: meio },
     { x: meio - 1, y: meio },
@@ -56,27 +135,32 @@ function iniciar() {
   comida = novaComida();
   estado = "esperando";
 
-  clearInterval(intervalo);
-  intervalo = null;
-
+  elNivel.textContent = dificuldade.nome;
   atualizarPlacar();
-  elTituloMensagem.classList.add("oculto");
+  elTituloMensagem.textContent = dificuldade.nome;
+  elTituloMensagem.className = "titulo-mensagem nivel";
   elTextoMensagem.textContent = "Pressione uma seta para começar";
-  botaoJogar.classList.add("oculto");
-  elMensagem.classList.remove("oculto");
+  elTextoMensagem.classList.add("piscando");
+  botoesFimDeJogo.classList.add("oculto");
+  mostrarTela(elMensagem);
   desenhar();
 }
 
 function comecar() {
   estado = "jogando";
-  elMensagem.classList.add("oculto");
-  intervalo = setInterval(passo, VELOCIDADE_MS);
+  mostrarTela(null);
+  intervalo = setInterval(passo, dificuldade.velocidadeMs);
+}
+
+function pararLoop() {
+  clearInterval(intervalo);
+  intervalo = null;
 }
 
 function novaComida() {
   const livres = [];
-  for (let x = 0; x < CELULAS; x++) {
-    for (let y = 0; y < CELULAS; y++) {
+  for (let x = 0; x < celulas; x++) {
+    for (let y = 0; y < celulas; y++) {
       if (!cobra.some((p) => p.x === x && p.y === y)) livres.push({ x, y });
     }
   }
@@ -92,7 +176,7 @@ function passo() {
   // Se não comeu, a cauda sai do lugar neste passo, então pode ser ocupada.
   const corpo = comeu ? cobra : cobra.slice(0, -1);
   const bateuNaParede =
-    cabeca.x < 0 || cabeca.y < 0 || cabeca.x >= CELULAS || cabeca.y >= CELULAS;
+    cabeca.x < 0 || cabeca.y < 0 || cabeca.x >= celulas || cabeca.y >= celulas;
   const bateuEmSi = corpo.some((p) => p.x === cabeca.x && p.y === cabeca.y);
 
   if (bateuNaParede || bateuEmSi) {
@@ -104,7 +188,7 @@ function passo() {
   if (comeu) {
     pontuacao += 10;
     atualizarPlacar();
-    if (cobra.length === CELULAS * CELULAS) {
+    if (cobra.length === celulas * celulas) {
       fimDeJogo(true);
       return;
     }
@@ -117,46 +201,37 @@ function passo() {
 }
 
 function fimDeJogo(venceu = false) {
-  clearInterval(intervalo);
-  intervalo = null;
+  pararLoop();
   estado = "fim";
 
-  if (pontuacao > recorde) {
-    recorde = pontuacao;
-    salvarRecorde();
+  if (pontuacao > recordeAtual()) {
+    recordes[chaveDificuldade()] = pontuacao;
+    salvarRecordes();
     atualizarPlacar();
   }
 
   desenhar();
   elTituloMensagem.textContent = venceu ? "Você venceu!" : "Fim de jogo";
-  elTituloMensagem.classList.toggle("vitoria", venceu);
-  elTituloMensagem.classList.remove("oculto");
+  elTituloMensagem.className = venceu ? "titulo-mensagem vitoria" : "titulo-mensagem";
   elTextoMensagem.textContent = `Pontuação: ${pontuacao}`;
-  botaoJogar.classList.remove("oculto");
-  elMensagem.classList.remove("oculto");
-  botaoJogar.focus();
+  elTextoMensagem.classList.remove("piscando");
+  botoesFimDeJogo.classList.remove("oculto");
+  mostrarTela(elMensagem);
 }
 
 function atualizarPlacar() {
   elPontuacao.textContent = pontuacao;
-  elRecorde.textContent = recorde;
+  elRecorde.textContent = recordeAtual();
 }
 
-const CORES = {
-  tela: "#0b0f0c",
-  grade: "rgba(57, 255, 20, 0.05)",
-  neon: "#39ff14",
-  cabeca: "#b6ff9e",
-  comida: "#ff2a3d",
-  brilhoComida: "#ff4d5e",
-};
+/* ---------- Desenho ---------- */
 
 function desenharGrade() {
   ctx.strokeStyle = CORES.grade;
   ctx.lineWidth = 1;
   ctx.beginPath();
-  for (let i = 1; i < CELULAS; i++) {
-    const p = i * TAMANHO_CELULA + 0.5;
+  for (let i = 1; i < celulas; i++) {
+    const p = i * tamanhoCelula + 0.5;
     ctx.moveTo(p, 0);
     ctx.lineTo(p, canvas.height);
     ctx.moveTo(0, p);
@@ -166,40 +241,41 @@ function desenharGrade() {
 }
 
 function desenharComida() {
-  const cx = comida.x * TAMANHO_CELULA + TAMANHO_CELULA / 2;
-  const cy = comida.y * TAMANHO_CELULA + TAMANHO_CELULA / 2;
+  const cx = comida.x * tamanhoCelula + tamanhoCelula / 2;
+  const cy = comida.y * tamanhoCelula + tamanhoCelula / 2;
+  const escala = tamanhoCelula / 20;
 
   ctx.save();
   ctx.shadowColor = CORES.brilhoComida;
-  ctx.shadowBlur = 14;
+  ctx.shadowBlur = 14 * escala;
   ctx.fillStyle = CORES.comida;
   ctx.beginPath();
-  ctx.arc(cx, cy, TAMANHO_CELULA / 2 - 3, 0, Math.PI * 2);
+  ctx.arc(cx, cy, tamanhoCelula / 2 - 3 * escala, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 
   // pequeno reflexo para dar volume
   ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
   ctx.beginPath();
-  ctx.arc(cx - 3, cy - 3, 2, 0, Math.PI * 2);
+  ctx.arc(cx - 3 * escala, cy - 3 * escala, 2 * escala, 0, Math.PI * 2);
   ctx.fill();
 }
 
 function desenharCobra() {
-  const margem = 2;
-  const lado = TAMANHO_CELULA - margem * 2;
+  const margem = Math.max(1, Math.round(tamanhoCelula / 10));
+  const lado = tamanhoCelula - margem * 2;
 
   ctx.save();
   ctx.shadowColor = CORES.neon;
-  ctx.shadowBlur = 10;
+  ctx.shadowBlur = 10 * (tamanhoCelula / 20);
   // desenha da cauda para a cabeça, assim a cabeça fica por cima
   for (let i = cobra.length - 1; i >= 0; i--) {
     const parte = cobra[i];
     ctx.fillStyle = i === 0 ? CORES.cabeca : CORES.neon;
     ctx.globalAlpha = i === 0 ? 1 : Math.max(0.55, 1 - i * 0.02);
     ctx.fillRect(
-      parte.x * TAMANHO_CELULA + margem,
-      parte.y * TAMANHO_CELULA + margem,
+      parte.x * tamanhoCelula + margem,
+      parte.y * tamanhoCelula + margem,
       lado,
       lado
     );
@@ -211,21 +287,23 @@ function desenharCobra() {
 
 function desenharOlhos() {
   const cabeca = cobra[0];
-  const cx = cabeca.x * TAMANHO_CELULA + TAMANHO_CELULA / 2;
-  const cy = cabeca.y * TAMANHO_CELULA + TAMANHO_CELULA / 2;
+  const escala = tamanhoCelula / 20;
+  const cx = cabeca.x * tamanhoCelula + tamanhoCelula / 2;
+  const cy = cabeca.y * tamanhoCelula + tamanhoCelula / 2;
   // olhos ficam do lado para onde a cobra está indo
-  const frente = 4;
-  const lado = 4;
+  const frente = 4 * escala;
+  const lado = 4 * escala;
+  const olho = Math.max(2, Math.round(3 * escala));
   const px = -direcao.y; // vetor perpendicular à direção
   const py = direcao.x;
 
   ctx.fillStyle = CORES.tela;
   for (const s of [-1, 1]) {
     ctx.fillRect(
-      Math.round(cx + direcao.x * frente + px * lado * s) - 1.5,
-      Math.round(cy + direcao.y * frente + py * lado * s) - 1.5,
-      3,
-      3
+      Math.round(cx + direcao.x * frente + px * lado * s - olho / 2),
+      Math.round(cy + direcao.y * frente + py * lado * s - olho / 2),
+      olho,
+      olho
     );
   }
 }
@@ -235,16 +313,38 @@ function desenhar() {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   desenharGrade();
-  desenharComida();
-  desenharCobra();
+  if (comida) desenharComida();
+  if (cobra.length) desenharCobra();
+}
+
+/* ---------- Controles ---------- */
+
+// Nos menus, as setas ↑ ↓ movem o foco entre os botões.
+function navegarMenu(evento) {
+  const tela = [telaMenu, telaDificuldade, elMensagem].find(
+    (t) => !t.classList.contains("oculto")
+  );
+  if (!tela || (evento.key !== "ArrowUp" && evento.key !== "ArrowDown")) return false;
+
+  const botoes = [...tela.querySelectorAll("button")].filter((b) => b.offsetParent);
+  if (!botoes.length) return false;
+  const atual = botoes.indexOf(document.activeElement);
+  const passoFoco = evento.key === "ArrowDown" ? 1 : -1;
+  const proximo = (atual + passoFoco + botoes.length) % botoes.length;
+  botoes[proximo].focus();
+  evento.preventDefault();
+  return true;
 }
 
 document.addEventListener("keydown", (evento) => {
+  if (estado === "menu" || estado === "fim") {
+    navegarMenu(evento);
+    return;
+  }
+
   const nova = DIRECOES[evento.key];
   if (!nova) return;
   evento.preventDefault(); // evita rolar a página com as setas
-
-  if (estado === "fim") return;
 
   // Compara com a última direção pedida para não deixar a cobra dar meia-volta,
   // mesmo quando duas teclas são apertadas rapidamente no mesmo passo.
@@ -264,6 +364,20 @@ document.addEventListener("keydown", (evento) => {
   }
 });
 
-botaoJogar.addEventListener("click", iniciar);
+telaMenu.addEventListener("click", (evento) => {
+  const botao = evento.target.closest("button");
+  if (!botao) return;
+  if (botao.dataset.acao === "jogar") abrirDificuldades();
+  // "recordes" e "sair" serão implementados em seguida
+});
 
-iniciar();
+telaDificuldade.addEventListener("click", (evento) => {
+  const botao = evento.target.closest("button[data-dificuldade]");
+  if (botao) escolherDificuldade(botao.dataset.dificuldade);
+});
+
+botaoVoltar.addEventListener("click", abrirMenu);
+botaoJogar.addEventListener("click", iniciar);
+botaoMenu.addEventListener("click", abrirMenu);
+
+abrirMenu();
